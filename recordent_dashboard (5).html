@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recordent · Analytics Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ── BRAND COLOURS ── */
+:root {
+  --gold:#F2DE27; --indigo:#4E6AC6; --navy:#091E56;
+  --wedge:#4B91A5; --aqua:#72D4DE; --red:#FF0B29;
+  --bg:#F0F4FC; --card:#fff; --muted:#6B7A9E;
+  --border:#E2E8F4; --r:14px; --sh:0 4px 20px rgba(9,30,86,.09);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--navy)}
+
+/* ── TOPBAR ── */
+.topbar{
+  background:var(--navy);display:flex;align-items:center;
+  justify-content:space-between;padding:0 28px;height:62px;
+  position:sticky;top:0;z-index:500;border-bottom:3px solid var(--gold);
+}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{height:38px;width:38px;object-fit:contain;background:#fff;border-radius:6px;padding:2px}
+.bname{color:#fff;font-size:17px;font-weight:800;letter-spacing:-.3px}
+.bsub{color:rgba(255,255,255,.45);font-size:9.5px;letter-spacing:.5px;text-transform:uppercase}
+
+/* ── UPLOAD BAR ── */
+.upbar{
+  background:linear-gradient(90deg,#0d2460,#091E56);
+  padding:10px 28px;display:flex;align-items:center;gap:14px;
+  border-bottom:1px solid rgba(78,106,198,.35);
+}
+.ubtn{
+  display:flex;align-items:center;gap:7px;background:var(--gold);
+  color:var(--navy);font-size:12px;font-weight:700;padding:7px 16px;
+  border-radius:8px;cursor:pointer;border:none;font-family:inherit;
+}
+.ubtn:hover{filter:brightness(1.1)}
+#fi{display:none}
+.uinfo{color:rgba(255,255,255,.45);font-size:11px}
+.ustatus{color:var(--aqua);font-size:11px;font-weight:600;margin-left:auto}
+
+/* ── TABS ── */
+.tabbar{
+  background:#fff;border-bottom:2px solid var(--border);
+  display:flex;padding:0 24px;position:sticky;top:62px;z-index:400;
+  box-shadow:0 2px 8px rgba(9,30,86,.05);overflow:hidden;
+}
+.tab{
+  flex:1;height:50px;font-size:12.5px;font-weight:500;
+  color:var(--muted);cursor:pointer;border:none;background:none;
+  font-family:inherit;border-bottom:3px solid transparent;
+  transition:all .16s;white-space:nowrap;
+}
+.tab:hover{color:var(--navy)}
+.tab.active{color:var(--navy);border-bottom-color:var(--gold);font-weight:700}
+
+/* ── PAGES ── */
+.page{display:none;padding:24px 28px 60px}
+.page.active{display:block}
+
+/* ── SECTION HEADER ── */
+.sh{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+.sh-bar{width:4px;height:28px;background:var(--gold);border-radius:2px}
+.sh-title{font-size:18px;font-weight:800;color:var(--navy);letter-spacing:-.3px}
+.sh-sub{font-size:11px;color:var(--muted);margin-top:2px}
+
+/* ── FILTER ROW ── */
+.fr{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap;
+    background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 16px}
+.fl{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+select.fs{
+  background:#F7F9FF;border:1.5px solid var(--border);border-radius:8px;
+  padding:7px 12px;font-size:12px;color:var(--navy);font-family:inherit;
+  cursor:pointer;outline:none;font-weight:600;transition:border-color .15s;min-width:120px;
+}
+select.fs:focus{border-color:var(--indigo)}
+.reset-btn{
+  margin-left:auto;background:transparent;border:1.5px solid var(--border);
+  border-radius:8px;padding:6px 14px;font-size:11px;font-weight:600;
+  color:var(--muted);cursor:pointer;font-family:inherit;transition:all .15s;
+}
+.reset-btn:hover{border-color:var(--indigo);color:var(--indigo)}
+
+/* ── KPI GRID ── */
+.kg{display:grid;gap:13px;margin-bottom:20px}
+.k5{grid-template-columns:repeat(5,1fr)}
+.k4{grid-template-columns:repeat(4,1fr)}
+.k3{grid-template-columns:repeat(3,1fr)}
+.kpi{
+  background:var(--navy);border-radius:var(--r);padding:16px 18px;
+  position:relative;overflow:hidden;transition:transform .14s,box-shadow .14s;cursor:default;
+}
+.kpi:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(9,30,86,.22)}
+.kpi::after{content:'';position:absolute;top:-20px;right:-20px;
+  width:80px;height:80px;background:rgba(242,222,39,.07);border-radius:50%}
+.kl{font-size:10px;font-weight:600;color:rgba(255,255,255,.58);
+    text-transform:uppercase;letter-spacing:.55px;margin-bottom:6px;line-height:1.3}
+.kv{font-size:22px;font-weight:800;color:#fff;letter-spacing:-.5px;line-height:1}
+.kv.sm{font-size:16px}
+.kd{font-size:10px;font-weight:600;margin-top:5px}
+.up{color:#72D4DE}.dn{color:#FF6B6B}.neu{color:rgba(255,255,255,.4)}
+.k-ind{background:linear-gradient(135deg,#4E6AC6,#3a52a8)}
+.k-teal{background:linear-gradient(135deg,#4B91A5,#38808f)}
+.k-gold{background:linear-gradient(135deg,#b09800,#8a7600)}
+.k-red{background:linear-gradient(135deg,#cc0922,#a00718)}
+
+/* ── CHART GRID ── */
+.cg{display:grid;gap:15px;margin-bottom:18px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:1fr 1fr 1fr}
+.g13{grid-template-columns:1fr 3fr}
+.g31{grid-template-columns:3fr 1fr}
+
+/* ── CARD ── */
+.card{background:var(--card);border-radius:var(--r);border:1px solid var(--border);
+      padding:20px;box-shadow:var(--sh);overflow:visible}
+.ct{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:2px}
+.cs{font-size:10px;color:var(--muted);margin-bottom:12px}
+.cw{position:relative;overflow:visible}
+.leg{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.li{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--muted)}
+.ld{width:10px;height:10px;border-radius:50%}
+.ll{width:18px;height:3px;border-radius:2px}
+
+/* ── HEATMAP ── */
+.hmw{overflow-x:auto}
+.hmt{border-collapse:separate;border-spacing:3px;width:100%}
+.hmh{font-size:9px;color:var(--muted);font-weight:600;padding:3px 5px;text-align:center;white-space:nowrap}
+.hmn{font-size:11px;font-weight:700;color:var(--navy);padding:3px 8px 3px 0;white-space:nowrap;min-width:70px}
+.hmc{border-radius:5px;font-size:10px;font-weight:700;text-align:center;
+     padding:6px 3px;min-width:46px;cursor:default;transition:transform .1s}
+.hmc:hover{transform:scale(1.1);z-index:10;position:relative}
+.hmleg{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;justify-content:center}
+.hmli{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--muted)}
+.hmb{width:13px;height:13px;border-radius:3px}
+
+/* ── FILTER ACTIVE INDICATOR ── */
+.filter-active{
+  background:#EEF2FF;color:var(--indigo);font-size:10px;font-weight:700;
+  padding:3px 10px;border-radius:20px;margin-left:6px;
+}
+
+@media(max-width:1100px){.k5{grid-template-columns:repeat(3,1fr)}.g2,.g3,.g13,.g31{grid-template-columns:1fr}}
+@media(max-width:700px){.k5,.k4,.k3{grid-template-columns:1fr 1fr}.tab{font-size:10px}}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="brand">
+    <img class="logo" src="data:image/png;base64,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" alt="Recordent">
+    <div><div class="bname">Recordent</div><div class="bsub">Lower Risk. Power Growth.</div></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <span style="background:rgba(242,222,39,.15);border:1px solid rgba(242,222,39,.35);color:var(--gold);font-size:11px;font-weight:600;padding:5px 14px;border-radius:20px" id="period-badge">FY 2026-27</span>
+  </div>
+</header>
+
+<!-- UPLOAD BAR -->
+<div class="upbar">
+  <label class="ubtn" for="fi">
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="2"><path d="M6.5 9V2M3.5 5l3-3 3 3"/><rect x="1" y="10" width="11" height="2.5" rx="1"/></svg>
+    Upload Excel
+  </label>
+  <input type="file" id="fi" accept=".xlsx,.xls" multiple>
+  <span class="uinfo">Upload any Recordent Excel — charts & filters update instantly</span>
+  <span class="ustatus" id="ustatus">● Apr 2026 built-in data</span>
+</div>
+
+<!-- TAB BAR -->
+<nav class="tabbar">
+  <button class="tab active" onclick="goTab('ov',this)">📊 Overview</button>
+  <button class="tab" onclick="goTab('rv',this)">💰 Revenue</button>
+  <button class="tab" onclick="goTab('mk',this)">📣 Marketing &amp; CAC</button>
+  <button class="tab" onclick="goTab('mb',this)">👥 Members &amp; ARP</button>
+  <button class="tab" onclick="goTab('tm',this)">🏆 Team</button>
+</nav>
+
+<!-- ═══════ OVERVIEW ═══════ -->
+<div id="page-ov" class="page active">
+  <div class="sh"><div class="sh-bar"></div><div>
+    <div class="sh-title">Business Overview</div>
+    <div class="sh-sub">Key metrics across Revenue · Marketing · Members</div>
+  </div></div>
+
+  <div class="fr">
+    <span class="fl">FY</span>
+    <select class="fs" id="ov-fy" onchange="ovApply()">
+      <option value="all">All Years</option>
+      <option value="2026-2027" selected>2026-2027</option>
+      <option value="2025-2026">2025-2026</option>
+      <option value="2024-2025">2024-2025</option>
+      <option value="2023-2024">2023-2024</option>
+      <option value="2022-2023">2022-2023</option>
+    </select>
+    <span class="fl" style="margin-left:8px">Month</span>
+    <select class="fs" id="ov-mo" onchange="ovApply()">
+      <option value="all">All Months</option>
+    </select>
+    <button class="reset-btn" onclick="ovReset()">↺ Reset Filters</button>
+    <span class="filter-active" id="ov-badge" style="display:none"></span>
+  </div>
+
+  <div class="kg k5" id="ov-kpis">
+    <div class="kpi"><div class="kl">Total Revenue</div><div class="kv sm" id="ov-k1">—</div><div class="kd up" id="ov-k1d"></div></div>
+    <div class="kpi k-ind"><div class="kl">Marketing ROI</div><div class="kv" id="ov-k2">—</div><div class="kd up" id="ov-k2d"></div></div>
+    <div class="kpi k-teal"><div class="kl">Rev / ₹1 Spent</div><div class="kv" id="ov-k3">—</div><div class="kd up" id="ov-k3d"></div></div>
+    <div class="kpi k-gold"><div class="kl">Total Expenses</div><div class="kv sm" id="ov-k4">—</div><div class="kd neu" id="ov-k4d"></div></div>
+    <div class="kpi k-red"><div class="kl">Sub CAC</div><div class="kv sm" id="ov-k5">—</div><div class="kd neu" id="ov-k5d"></div></div>
+  </div>
+
+  <div class="cg g2">
+    <div class="card">
+      <div class="ct">Revenue vs Expenses Trend</div>
+      <div class="cs" id="ov-c1-sub">Filtered period — ₹ Lakhs</div>
+      <div class="leg">
+        <div class="li"><div class="ll" style="background:var(--navy)"></div>Revenue</div>
+        <div class="li"><div class="ll" style="background:var(--red)"></div>Expense W/Sales</div>
+        <div class="li"><div class="ll" style="background:var(--gold)"></div>Mktg Only</div>
+      </div>
+      <div class="cw" style="height:230px"><canvas id="c-ov1"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ct">ROI % Trend</div>
+      <div class="cs" id="ov-c2-sub">Filtered period</div>
+      <div class="leg">
+        <div class="li"><div class="ll" style="background:var(--indigo)"></div>W/Sales</div>
+        <div class="li"><div class="ll" style="background:var(--aqua)"></div>W/O Sales</div>
+      </div>
+      <div class="cw" style="height:230px"><canvas id="c-ov2"></canvas></div>
+    </div>
+  </div>
+  <div class="cg g3">
+    <div class="card">
+      <div class="ct">Revenue Streams</div><div class="cs" id="ov-c3-sub">Filtered period</div>
+      <div class="cw" style="height:220px"><canvas id="c-ov3"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ct">Annual Revenue — FY</div><div class="cs">All years (highlight = selected FY)</div>
+      <div class="cw" style="height:220px"><canvas id="c-ov4"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ct">Rev per ₹1 Spent</div><div class="cs" id="ov-c5-sub">Filtered period</div>
+      <div class="leg">
+        <div class="li"><div class="ld" style="background:var(--navy)"></div>W/Sales</div>
+        <div class="li"><div class="ld" style="background:var(--aqua)"></div>W/O Sales</div>
+      </div>
+      <div class="cw" style="height:220px"><canvas id="c-ov5"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ REVENUE ═══════ -->
+<div id="page-rv" class="page">
+  <div class="sh"><div class="sh-bar"></div><div>
+    <div class="sh-title">Revenue Analytics</div>
+    <div class="sh-sub">Monthly revenue breakdown — all streams</div>
+  </div></div>
+
+  <div class="fr">
+    <span class="fl">FY</span>
+    <select class="fs" id="rv-fy" onchange="rvApply()">
+      <option value="all">All Years</option>
+      <option value="2026-2027" selected>2026-2027</option>
+      <option value="2025-2026">2025-2026</option>
+      <option value="2024-2025">2024-2025</option>
+      <option value="2023-2024">2023-2024</option>
+      <option value="2022-2023">2022-2023</option>
+    </select>
+    <span class="fl" style="margin-left:8px">Month</span>
+    <select class="fs" id="rv-mo" onchange="rvApply()"><option value="all">All Months</option></select>
+    <span class="fl" style="margin-left:8px">Stream</span>
+    <select class="fs" id="rv-stream" onchange="rvApply()">
+      <option value="all">All Streams</option>
+      <option value="risk">Risk</option>
+      <option value="arm">ARM</option>
+      <option value="others">Others</option>
+      <option value="subs">Subscriptions</option>
+    </select>
+    <button class="reset-btn" onclick="rvReset()">↺ Reset</button>
+  </div>
+
+  <div class="kg k4">
+    <div class="kpi"><div class="kl">Total Revenue</div><div class="kv sm" id="rv-k1">—</div></div>
+    <div class="kpi k-ind"><div class="kl">Sales Booking</div><div class="kv sm" id="rv-k2">—</div></div>
+    <div class="kpi k-teal"><div class="kl">Invoice Cleared</div><div class="kv sm" id="rv-k3">—</div></div>
+    <div class="kpi k-gold"><div class="kl">Risk Revenue</div><div class="kv sm" id="rv-k4">—</div></div>
+  </div>
+
+  <div class="cg g2">
+    <div class="card">
+      <div class="ct">Monthly Revenue Components</div><div class="cs" id="rv-c1-sub">Filtered period</div>
+      <div class="leg">
+        <div class="li"><div class="ll" style="background:var(--navy)"></div>Total Revenue</div>
+        <div class="li"><div class="ll" style="background:var(--indigo)"></div>Sales Booking</div>
+        <div class="li"><div class="ll" style="background:var(--aqua)"></div>Invoice Cleared</div>
+      </div>
+      <div class="cw" style="height:250px"><canvas id="c-rv1"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ct">Revenue Breakdown</div><div class="cs" id="rv-c2-sub">By stream — filtered period</div>
+      <div class="cw" style="height:250px"><canvas id="c-rv2"></canvas></div>
+    </div>
+  </div>
+  <div class="cg g2">
+    <div class="card">
+      <div class="ct">Risk Revenue Trend</div><div class="cs" id="rv-c3-sub">Filtered period</div>
+      <div class="cw" style="height:210px"><canvas id="c-rv3"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ct">Receivables vs ARM Trend</div><div class="cs" id="rv-c4-sub">Filtered period</div>
+      <div class="leg">
+        <div class="li"><div class="ll" style="background:var(--wedge)"></div>Receivables</div>
+        <div class="li"><div class="ll" style="background:var(--gold)"></div>ARM</div>
+      </div>
+      <div class="cw" style="height:210px"><canvas id="c-rv4"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ MARKETING ═══════ -->
+<div id="page-mk" class="page">
+  <div class="sh"><div class="sh-bar"></div><div>
+    <div class="sh-title">Marketing &amp; CAC Analytics</div>
+    <div class="sh-sub">Spend efficiency · Customer Acquisition Cost · ROI</div>
+  </div></div>
+
+  <div class="fr">
+    <span class="fl">View</span>
+    <select class="fs" id="mk-view" onchange="mkApply()">
+      <option value="w">With Sales Team Cost</option>
+      <option value="wo">Without Sales Team Cost</option>
+    </select>
+    <span class="fl" style="margin-left:8px">Period</span>
+    <select class="fs" id="mk-period" onchange="mkApply()">
+      <option value="14">Last 14 Months</option>
+      <option value="12">Last 12 Months</option>
+      <option value="6">Last 6 Months</option>
+      <option value="3">Last 3 Months</option>
+    </select>
+    <button class="reset-btn" onclick="mkReset()">↺ Reset</button>
+  </div>
+
+  <div class="kg k4">
+    <div class="kpi"><div class="kl">Mktg Expenses</div><div class="kv sm" id="mk-k1">—</div><div class="kd neu" id="mk-k1d"></div></div>
+    <div class="kpi k-ind"><div class="kl">Total Expenses</div><div class="kv sm" id="mk-k2">—</div><div class="kd neu" id="mk-k2d"></div></div>
+    <div class="kpi k-teal"><div class="kl">Subscription CAC</div><div class="kv sm" id="mk-k3">—</div><div class="kd" id="mk-k3d"></div></div>
+    <div class="kpi k-gold"><div class="kl">Marketing ROI</div><div class="kv" id="mk-k4">—</div><div class="kd up" id="mk-k4d"></div></div>
+  </div>
+
+  <div class="cg g2">
+    <div class="card">
+      <div class="ct">Revenue vs Expenses</div><div class="cs" id="mk-c1-sub">Selected period — ₹L</div>
+      <div class="leg">
+        <div class="li"><div class="ll" style="background:var(--navy)"></div>Revenue</div>
+        <div class="li"><div class="ll" style="background:var(--red)" id="mk-exp-leg"></div><span id="mk-exp-lbl">Exp W/Sales</span></div>
+        <div class="li"><div class="ll" style="background:var(--gold)"></div>Mktg Only</div>
+      </div>
+      <div class="cw" style="height:240px"><canvas id="c-mk1"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ct">Subscription CAC Trend</div><div class="cs" id="mk-c2-sub">₹ per subscription — selected period</div>
+      <div class="leg">
+        <div class="li"><div class="ll" style="background:var(--indigo)"></div>CAC W/Sales</div>
+        <div class="li"><div class="ll" style="background:var(--aqua)"></div>CAC W/O Sales</div>
+      </div>
+      <div class="cw" style="height:240px"><canvas id="c-mk2"></canvas></div>
+    </div>
+  </div>
+  <div class="cg g2">
+    <div class="card">
+      <div class="ct">Revenue per ₹1 Spent</div><div class="cs" id="mk-c3-sub">Selected period</div>
+      <div class="leg">
+        <div class="li"><div class="ld" style="background:var(--navy)"></div>W/Sales</div>
+        <div class="li"><div class="ld" style="background:var(--aqua)"></div>W/O Sales</div>
+      </div>
+      <div class="cw" style="height:210px"><canvas id="c-mk3"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ct">New Members Acquired</div><div class="cs" id="mk-c4-sub">Selected period</div>
+      <div class="leg">
+        <div class="li"><div class="ld" style="background:var(--navy)"></div>Registrations</div>
+        <div class="li"><div class="ld" style="background:var(--gold)"></div>Subscriptions</div>
+      </div>
+      <div class="cw" style="height:210px"><canvas id="c-mk4"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ MEMBERS ═══════ -->
+<div id="page-mb" class="page">
+  <div class="sh"><div class="sh-bar"></div><div>
+    <div class="sh-title">Members &amp; ARP</div>
+    <div class="sh-sub">Membership tiers · ARP growth · Cumulative member analysis</div>
+  </div></div>
+
+  <div class="fr">
+    <span class="fl">FY</span>
+    <select class="fs" id="mb-fy" onchange="mbApply()">
+      <option value="all">All Years</option>
+      <option value="2026-2027" selected>2026-2027</option>
+      <option value="2025-2026">2025-2026</option>
+      <option value="2024-2025">2024-2025</option>
+      <option value="2023-2024">2023-2024</option>
+      <option value="2022-2023">2022-2023</option>
+      <option value="2021-2022">2021-2022</option>
+    </select>
+    <button class="reset-btn" onclick="mbReset()">↺ Reset</button>
+    <span class="filter-active" id="mb-badge" style="display:none"></span>
+  </div>
+
+  <div class="kg k4">
+    <div class="kpi"><div class="kl">Total Revenue (FY)</div><div class="kv sm" id="mb-k1">—</div></div>
+    <div class="kpi k-ind"><div class="kl">Contributing Members</div><div class="kv" id="mb-k2">—</div></div>
+    <div class="kpi k-teal"><div class="kl">Revenue / Member</div><div class="kv sm" id="mb-k3">—</div></div>
+    <div class="kpi k-gold"><div class="kl">ARP / Subscription</div><div class="kv sm" id="mb-k4">—</div></div>
+  </div>
+
+  <div class="cg g2">
+    <div class="card">
+      <div class="ct">Revenue per Contributing Member — FY Wise</div>
+      <div class="cs">Bar = Revenue (₹L) | Line = Member Count | Highlight = selected FY</div>
+      <div class="leg">
+        <div class="li"><div class="ld" style="background:var(--navy)"></div>Revenue (₹L)</div>
+        <div class="li"><div class="ld" style="background:var(--gold)"></div>Members</div>
+      </div>
+      <div class="cw" style="height:270px"><canvas id="c-mb1"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ct">ARP — Registration vs Subscription</div>
+      <div class="cs">Average Revenue per Member type — highlight = selected FY</div>
+      <div class="leg">
+        <div class="li"><div class="ld" style="background:var(--navy)"></div>ARP/Registration</div>
+        <div class="li"><div class="ld" style="background:var(--wedge)"></div>ARP/Subscription</div>
+      </div>
+      <div class="cw" style="height:270px"><canvas id="c-mb2"></canvas></div>
+    </div>
+  </div>
+  <div class="cg g2">
+    <div class="card">
+      <div class="ct">Cumulative Member Growth</div>
+      <div class="cs">Total registrations and subscriptions over all FYs</div>
+      <div class="leg">
+        <div class="li"><div class="ll" style="background:var(--navy)"></div>Cum. Registrations</div>
+        <div class="li"><div class="ll" style="background:var(--aqua)"></div>Cum. Subscriptions</div>
+      </div>
+      <div class="cw" style="height:210px"><canvas id="c-mb3"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ct">New Members per FY</div>
+      <div class="cs">Fresh additions each year — highlight = selected FY</div>
+      <div class="leg">
+        <div class="li"><div class="ld" style="background:var(--indigo)"></div>Registrations</div>
+        <div class="li"><div class="ld" style="background:var(--gold)"></div>Subscriptions</div>
+      </div>
+      <div class="cw" style="height:210px"><canvas id="c-mb4"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ TEAM ═══════ -->
+<div id="page-tm" class="page">
+  <div class="sh"><div class="sh-bar"></div><div>
+    <div class="sh-title">Team Performance</div>
+    <div class="sh-sub">Monthly target achievement % per sales member</div>
+  </div></div>
+
+  <div class="fr">
+    <span class="fl">Member</span>
+    <select class="fs" id="tm-mem" onchange="tmApply()">
+      <option value="all">All Members</option>
+      <option>Bhasker</option><option>Rajkiran</option><option>Anurag</option>
+      <option>Enosh</option><option>Avinash</option><option>Harshank</option>
+    </select>
+    <span class="fl" style="margin-left:8px">Period</span>
+    <select class="fs" id="tm-per" onchange="tmApply()">
+      <option value="9">Last 9 Months</option>
+      <option value="6">Last 6 Months</option>
+      <option value="3">Last 3 Months</option>
+      <option value="all">All Available</option>
+    </select>
+    <button class="reset-btn" onclick="tmReset()">↺ Reset</button>
+  </div>
+
+  <div class="kg k3" id="tm-kpis">
+    <div class="kpi"><div class="kl">Top Performer (Latest)</div><div class="kv sm" id="tm-k1">—</div><div class="kd up" id="tm-k1d"></div></div>
+    <div class="kpi k-ind"><div class="kl">Team Avg Achievement</div><div class="kv" id="tm-k2">—</div><div class="kd neu">of target</div></div>
+    <div class="kpi k-teal"><div class="kl">Above 80% (Latest Mo)</div><div class="kv" id="tm-k3">—</div><div class="kd up"> members</div></div>
+  </div>
+
+  <div class="card" style="margin-bottom:18px">
+    <div class="ct">Achievement Heatmap <span id="tm-hm-sub" style="font-weight:400;color:var(--muted);font-size:11px"></span></div>
+    <div class="cs">Hover cells for details · Color coded by band</div>
+    <div class="hmw"><table class="hmt" id="hmt"></table></div>
+    <div class="hmleg">
+      <div class="hmli"><div class="hmb" style="background:#166534"></div>&gt;100%</div>
+      <div class="hmli"><div class="hmb" style="background:var(--aqua)"></div>81–100%</div>
+      <div class="hmli"><div class="hmb" style="background:var(--gold)"></div>51–80%</div>
+      <div class="hmli"><div class="hmb" style="background:#FD7E14"></div>25–50%</div>
+      <div class="hmli"><div class="hmb" style="background:var(--red)"></div>&lt;25%</div>
+      <div class="hmli"><div class="hmb" style="background:#F1F5F9"></div>No data</div>
+    </div>
+  </div>
+  <div class="cg g2">
+    <div class="card">
+      <div class="ct">Achievement Trend</div><div class="cs" id="tm-c1-sub">Selected members & period</div>
+      <div class="cw" style="height:240px"><canvas id="c-tm1"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ct">Latest Month Snapshot</div><div class="cs">Horizontal — each bar = % of target</div>
+      <div class="cw" style="height:240px"><canvas id="c-tm2"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// COLOUR PALETTE
+// ═══════════════════════════════════════════════
+const C={
+  gold:'#F2DE27',ind:'#4E6AC6',navy:'#091E56',
+  wedge:'#4B91A5',aqua:'#72D4DE',red:'#FF0B29'
+};
+
+// ═══════════════════════════════════════════════
+// CHART.JS DEFAULTS
+// ═══════════════════════════════════════════════
+Chart.defaults.font.family="'Inter',sans-serif";
+Chart.defaults.font.size=11;
+Chart.defaults.color='#6B7A9E';
+Chart.defaults.plugins.legend.display=false;
+Chart.defaults.plugins.tooltip.backgroundColor='#091E56';
+Chart.defaults.plugins.tooltip.titleFont={weight:'700',size:12};
+Chart.defaults.plugins.tooltip.padding=10;
+Chart.defaults.plugins.tooltip.cornerRadius=8;
+
+// ═══════════════════════════════════════════════
+// DATA LABEL PLUGIN
+// ═══════════════════════════════════════════════
+Chart.register({id:'dlp',afterDatasetsDraw(chart){
+  const{ctx}=chart;
+  chart.data.datasets.forEach((ds,di)=>{
+    const meta=chart.getDatasetMeta(di);
+    if(meta.hidden||!ds.dlFmt)return;
+    meta.data.forEach((el,i)=>{
+      const v=ds.data[i];
+      if(v==null||v===0)return;
+      const fmt=ds.dlFmt(v,i);
+      if(!fmt)return;
+      ctx.save();
+      ctx.font="600 10px 'Inter',sans-serif";
+      ctx.fillStyle=ds.dlColor||'#091E56';
+      ctx.textAlign='center';
+      ctx.textBaseline='bottom';
+      if(chart.options.indexAxis==='y'){
+        ctx.textAlign='left';ctx.textBaseline='middle';
+        ctx.fillStyle='#091E56';
+        ctx.fillText(fmt,(el.tooltipPosition?el.tooltipPosition():{x:el.x,y:el.y}).x+5,el.y);
+      }else{
+        const p=el.tooltipPosition?el.tooltipPosition():{x:el.x,y:el.y};
+        ctx.fillText(fmt,p.x,p.y-5);
+      }
+      ctx.restore();
+    });
+  });
+}});
+
+const NG={grid:{display:false},border:{display:false}};
+
+// ═══════════════════════════════════════════════
+// MASTER DATA — populated from Excel files or built-in
+// ═══════════════════════════════════════════════
+function excelDate(n){
+  const d=new Date(Math.round((n-25569)*86400*1000));
+  return d.toLocaleDateString('en-IN',{month:'short',year:'2-digit'});
+}
+function fyOfSerial(n){
+  const d=new Date(Math.round((n-25569)*86400*1000));
+  const yr=d.getFullYear(),mo=d.getMonth()+1;
+  const fy=mo>=4?yr:yr-1;
+  return `${fy}-${fy+1}`;
+}
+
+// ROI monthly data (serials → converted)
+let ROI=[
+  {s:45748,mo:'Apr-25',fy:'2025-2026',expW:417740,expWO:80240,rev:1863982},
+  {s:45778,mo:'May-25',fy:'2025-2026',expW:613395,expWO:217158,rev:1880998},
+  {s:45809,mo:'Jun-25',fy:'2025-2026',expW:551594,expWO:155357,rev:1171666},
+  {s:45839,mo:'Jul-25',fy:'2025-2026',expW:735779,expWO:339542,rev:1270076},
+  {s:45870,mo:'Aug-25',fy:'2025-2026',expW:655592,expWO:259355,rev:1406881},
+  {s:45901,mo:'Sep-25',fy:'2025-2026',expW:504523,expWO:108286,rev:1587836},
+  {s:45931,mo:'Oct-25',fy:'2025-2026',expW:563209,expWO:166972,rev:859707},
+  {s:45962,mo:'Nov-25',fy:'2025-2026',expW:667443,expWO:271206,rev:1427965},
+  {s:45992,mo:'Dec-25',fy:'2025-2026',expW:623480,expWO:227243,rev:1393817},
+  {s:46023,mo:'Jan-26',fy:'2026-2027',expW:744630,expWO:296250,rev:973709},
+  {s:46054,mo:'Feb-26',fy:'2026-2027',expW:536082,expWO:110702,rev:1494947},
+  {s:46082,mo:'Mar-26',fy:'2026-2027',expW:667129,expWO:215713,rev:1963054},
+  {s:46113,mo:'Apr-26',fy:'2026-2027',expW:656686,expWO:205141,rev:2728404},
+  {s:46143,mo:'May-26',fy:'2026-2027',expW:665855,expWO:195188,rev:2564696},
+];
+
+// MIS monthly (Revenue Growth)
+let MIS=[
+  {s:45749,mo:'Apr-25',fy:'2025-2026',rev:3108982,salBk:2853018,invCl:1609759,others:1245000,risk:1281893,recv:582089,arm:462338},
+  {s:45779,mo:'May-25',fy:'2025-2026',rev:3125998,salBk:2938656,invCl:4983991,others:1245000,risk:1085814,recv:795184,arm:1026625},
+  {s:45810,mo:'Jun-25',fy:'2025-2026',rev:2916666,salBk:2888986,invCl:3269550,others:1745000,risk:887049,recv:284617,arm:849309},
+  {s:45840,mo:'Jul-25',fy:'2025-2026',rev:2690076,salBk:2920165,invCl:1549430,others:1420000,risk:594456,recv:675620,arm:551701},
+  {s:45871,mo:'Aug-25',fy:'2025-2026',rev:2826881,salBk:2960413,invCl:961384,others:1420000,risk:466424,recv:940457,arm:429451},
+  {s:45902,mo:'Sep-25',fy:'2025-2026',rev:3007836,salBk:2893524,invCl:887612,others:1420000,risk:602733,recv:985103,arm:568415},
+  {s:45932,mo:'Oct-25',fy:'2025-2026',rev:10859707,salBk:10804201,invCl:427295,others:10000000,risk:502419,recv:357288,arm:455534},
+  {s:45963,mo:'Nov-25',fy:'2025-2026',rev:8729863,salBk:8815854,invCl:649450,others:7301898,risk:869627,recv:558338,arm:704624},
+  {s:45993,mo:'Dec-25',fy:'2025-2026',rev:2813817,salBk:3013425,invCl:3916378,others:1420000,risk:606617,recv:787200,arm:564924},
+  {s:46023,mo:'Jan-26',fy:'2026-2027',rev:2218709,salBk:2817813,invCl:2668899,others:1245000,risk:603266,recv:370443,arm:597366},
+  {s:46054,mo:'Feb-26',fy:'2026-2027',rev:2739947,salBk:2683859,invCl:2635635,others:1245000,risk:817545,recv:677402,arm:796069},
+  {s:46082,mo:'Mar-26',fy:'2026-2027',rev:3561054,salBk:3354690,invCl:2320628,others:1598000,risk:1067452,recv:410640,arm:672742},
+  {s:46113,mo:'Apr-26',fy:'2026-2027',rev:3728404,salBk:3713654,invCl:1332180,others:1000000,risk:1399359,recv:1329045,arm:1389801},
+  {s:46143,mo:'May-26',fy:'2026-2027',rev:2928546,salBk:2984596,invCl:2905904,others:363850,risk:1496045,recv:1139450,arm:1446839},
+];
+
+// Marketing Expenses (last 14 months)
+let MEXP=[
+  {s:45748,mo:'Apr-25',fy:'2025-2026',adSpend:80240,salesCost:337500,totalSpend:417740,paid:10,regs:11,cacW:41774,cacWO:7295},
+  {s:45778,mo:'May-25',fy:'2025-2026',adSpend:217158,salesCost:396237,totalSpend:613395,paid:16,regs:27,cacW:38337,cacWO:8043},
+  {s:45809,mo:'Jun-25',fy:'2025-2026',adSpend:155357,salesCost:396237,totalSpend:551594,paid:9,regs:13,cacW:61289,cacWO:11951},
+  {s:45839,mo:'Jul-25',fy:'2025-2026',adSpend:339542,salesCost:396237,totalSpend:735779,paid:12,regs:15,cacW:61315,cacWO:22636},
+  {s:45870,mo:'Aug-25',fy:'2025-2026',adSpend:259355,salesCost:396237,totalSpend:655592,paid:20,regs:19,cacW:32780,cacWO:13650},
+  {s:45901,mo:'Sep-25',fy:'2025-2026',adSpend:108286,salesCost:396237,totalSpend:504523,paid:15,regs:20,cacW:33635,cacWO:7219},
+  {s:45931,mo:'Oct-25',fy:'2025-2026',adSpend:166972,salesCost:396237,totalSpend:563209,paid:13,regs:11,cacW:43324,cacWO:15179},
+  {s:45962,mo:'Nov-25',fy:'2025-2026',adSpend:271206,salesCost:396237,totalSpend:667443,paid:7,regs:12,cacW:95349,cacWO:22601},
+  {s:45992,mo:'Dec-25',fy:'2025-2026',adSpend:227243,salesCost:396237,totalSpend:623480,paid:14,regs:20,cacW:44534,cacWO:11362},
+  {s:46023,mo:'Jan-26',fy:'2026-2027',adSpend:296250,salesCost:448380,totalSpend:744630,paid:11,regs:23,cacW:67694,cacWO:12880},
+  {s:46054,mo:'Feb-26',fy:'2026-2027',adSpend:110702,salesCost:425380,totalSpend:536082,paid:11,regs:22,cacW:48735,cacWO:5032},
+  {s:46082,mo:'Mar-26',fy:'2026-2027',adSpend:215713,salesCost:451416,totalSpend:667129,paid:9,regs:19,cacW:74125,cacWO:11353},
+  {s:46113,mo:'Apr-26',fy:'2026-2027',adSpend:205141,salesCost:451545,totalSpend:656686,paid:15,regs:28,cacW:43779,cacWO:13676},
+  {s:46143,mo:'May-26',fy:'2026-2027',adSpend:195188,salesCost:470667,totalSpend:665855,paid:12,regs:33,cacW:55488,cacWO:16266},
+];
+
+// ARP / FY data
+let ARP=[
+  {fy:'2020-2021',rev:400000,members:null,revPerMem:null,cumMem:0,cumRev:400000,arpReg:131,arpSub:323,regs:2924,subs:1233,cumRegs:3062,cumSubs:1237},
+  {fy:'2021-2022',rev:2838296,members:508,revPerMem:5587,cumMem:508,cumRev:3238296,arpReg:419,arpSub:1180,regs:4660,subs:1508,cumRegs:7722,cumSubs:2745},
+  {fy:'2022-2023',rev:8439566,members:765,revPerMem:11032,cumMem:1273,cumRev:11677862,arpReg:1122,arpSub:3232,regs:2683,subs:868,cumRegs:10405,cumSubs:3613},
+  {fy:'2023-2024',rev:11025609,members:327,revPerMem:33717,cumMem:1600,cumRev:22703471,arpReg:1999,arpSub:5667,regs:955,subs:393,cumRegs:11360,cumSubs:4006},
+  {fy:'2024-2025',rev:23908052,members:227,revPerMem:105322,cumMem:1827,cumRev:46611523,arpReg:3999,arpSub:11181,regs:296,subs:163,cumRegs:11656,cumSubs:4169},
+  {fy:'2025-2026',rev:48599537,members:227,revPerMem:214095,cumMem:2054,cumRev:95211060,arpReg:8023,arpSub:22122,regs:212,subs:135,cumRegs:11868,cumSubs:4304},
+  {fy:'2026-2027',rev:6656950,members:48,revPerMem:138686,cumMem:2102,cumRev:101868010,arpReg:8545,arpSub:23499,regs:54,subs:31,cumRegs:11922,cumSubs:4335},
+];
+
+// Team data
+const TEAM_ALL_MOS=[
+  'Oct-23','Nov-23','Dec-23','Jan-24','Feb-24','Mar-24','Apr-24','May-24','Jun-24','Jul-24',
+  'Aug-24','Sep-24','Oct-24','Nov-24','Dec-24','Jan-25','Feb-25','Mar-25',
+  'Apr-25','May-25','Jun-25','Jul-25','Aug-25','Sep-25','Oct-25','Nov-25','Dec-25'
+];
+let TEAM={
+  Bhasker:[149,71,72,64,55,39,75,66,84,77,35,70,44,66,67,67,103,125,123,74,93,113,85,50,41,93,109],
+  Rajkiran:[35,35,17,36,45,34,42,45,74,42,18,24,14,26,10,18,18,6,19,22,37,34,31,24,9,61,36],
+  Anurag:[63,58,92,106,50,87,28,43,7,40,7,19,18,21,42,null,null,null,null,1,0,131,26,54,20,67,93],
+  Enosh:[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,0,88,47,20,6,1,14,19,29],
+  Avinash:[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,47,48],
+  Harshank:[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],
+};
+const TCOLORS={Bhasker:C.navy,Rajkiran:C.ind,Anurag:C.wedge,Enosh:C.aqua,Avinash:C.gold,Harshank:'#7C5DFA'};
+
+// ═══════════════════════════════════════════════
+// CHART STORE — destroy & recreate
+// ═══════════════════════════════════════════════
+const CH={};
+function mk(id,cfg){
+  if(CH[id]){try{CH[id].destroy()}catch(e){}}
+  const el=document.getElementById(id);
+  if(el)CH[id]=new Chart(el,cfg);
+  return CH[id];
+}
+
+// ═══════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════
+function fmtR(v){
+  if(v==null||isNaN(v))return'—';
+  const L=v/100000;
+  if(L>=100)return'₹'+(L/100).toFixed(1)+'Cr';
+  if(L>=10)return'₹'+L.toFixed(0)+'L';
+  return'₹'+L.toFixed(1)+'L';
+}
+function fmtK(v){
+  if(v==null)return'—';
+  if(v>=100000)return'₹'+(v/100000).toFixed(1)+'L';
+  if(v>=1000)return'₹'+(v/1000).toFixed(0)+'K';
+  return'₹'+Math.round(v);
+}
+function pct(v){return v==null?'—':Math.round(v)+'%';}
+function roiPct(rev,exp){return Math.round(((rev-exp)/exp)*100);}
+
+// ═══════════════════════════════════════════════
+// POPULATE MONTH DROPDOWNS
+// ═══════════════════════════════════════════════
+function populateMonths(){
+  const allMos=[...new Set(ROI.map(r=>r.mo))];
+  ['ov-mo','rv-mo'].forEach(id=>{
+    const sel=document.getElementById(id);
+    if(!sel)return;
+    // Keep "All"
+    while(sel.options.length>1)sel.remove(1);
+    allMos.forEach(m=>{
+      const o=document.createElement('option');o.value=m;o.text=m;sel.add(o);
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════
+// OVERVIEW TAB
+// ═══════════════════════════════════════════════
+function ovFilter(){
+  const fy=document.getElementById('ov-fy').value;
+  const mo=document.getElementById('ov-mo').value;
+  let rows=ROI;
+  if(fy!=='all')rows=rows.filter(r=>r.fy===fy);
+  if(mo!=='all')rows=rows.filter(r=>r.mo===mo);
+  return rows;
+}
+function ovApply(){
+  const rows=ovFilter();
+  const fy=document.getElementById('ov-fy').value;
+  const mo=document.getElementById('ov-mo').value;
+
+  // Badge
+  const b=document.getElementById('ov-badge');
+  if(fy!=='all'||mo!=='all'){b.style.display='inline';b.textContent=(fy!=='all'?fy:'')+(mo!=='all'?' · '+mo:'');}
+  else b.style.display='none';
+
+  // Period badge
+  document.getElementById('period-badge').textContent=fy==='all'?'All FY':(mo!=='all'?mo+' '+fy:fy);
+
+  // KPIs
+  const totRev=rows.reduce((a,r)=>a+r.rev,0);
+  const totExpW=rows.reduce((a,r)=>a+r.expW,0);
+  const totExpWO=rows.reduce((a,r)=>a+r.expWO,0);
+  const roi=roiPct(totRev,totExpW);
+  const rpr=(totRev/totExpW).toFixed(1);
+
+  // CAC from MEXP
+  let mexpRows=MEXP;
+  if(fy!=='all')mexpRows=mexpRows.filter(r=>r.fy===fy);
+  if(mo!=='all')mexpRows=mexpRows.filter(r=>r.mo===mo);
+  const avgCAC=mexpRows.length?Math.round(mexpRows.reduce((a,r)=>a+r.cacW,0)/mexpRows.length):0;
+
+  document.getElementById('ov-k1').textContent=fmtR(totRev);
+  document.getElementById('ov-k2').textContent=roi+'%';
+  document.getElementById('ov-k3').textContent=rpr+'x';
+  document.getElementById('ov-k4').textContent=fmtR(totExpW);
+  document.getElementById('ov-k5').textContent=fmtK(avgCAC);
+
+  const sub=rows.length===1?rows[0].mo+' '+rows[0].fy:`${rows.length} months · ${fy==='all'?'All FY':fy}`;
+  ['ov-c1-sub','ov-c2-sub','ov-c3-sub','ov-c5-sub'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.textContent=sub;
+  });
+
+  // Chart 1 — Rev vs Exp
+  mk('c-ov1',{type:'line',data:{labels:rows.map(r=>r.mo),datasets:[
+    {data:rows.map(r=>+(r.rev/100000).toFixed(1)),borderColor:C.navy,backgroundColor:'rgba(9,30,86,.1)',borderWidth:2.5,pointRadius:3,fill:true,tension:.4,label:'Revenue'},
+    {data:rows.map(r=>+(r.expW/100000).toFixed(1)),borderColor:C.red,borderWidth:2,borderDash:[5,3],pointRadius:2,tension:.4,label:'Exp W/Sales'},
+    {data:rows.map(r=>+(r.expWO/100000).toFixed(1)),borderColor:C.gold,borderWidth:2,borderDash:[5,3],pointRadius:2,tension:.4,label:'Mktg Only'},
+  ]},options:lineOpts(v=>'₹'+v+'L')});
+
+  // Chart 2 — ROI %
+  mk('c-ov2',{type:'line',data:{labels:rows.map(r=>r.mo),datasets:[
+    {data:rows.map(r=>roiPct(r.rev,r.expW)),borderColor:C.ind,backgroundColor:'rgba(78,106,198,.1)',borderWidth:2.5,pointRadius:3,fill:true,tension:.4,label:'ROI W/Sales'},
+    {data:rows.map(r=>roiPct(r.rev,r.expWO)),borderColor:C.aqua,borderWidth:2,pointRadius:2,tension:.4,label:'ROI W/O Sales'},
+  ]},options:lineOpts(v=>v+'%')});
+
+  // Chart 3 — Revenue streams donut (use MIS for the period)
+  let misRows=MIS;
+  if(fy!=='all')misRows=misRows.filter(r=>r.fy===fy);
+  if(mo!=='all')misRows=misRows.filter(r=>r.mo===mo);
+  const riskT=misRows.reduce((a,r)=>a+r.risk,0);
+  const armT=misRows.reduce((a,r)=>a+r.arm,0);
+  const othT=misRows.reduce((a,r)=>a+r.others,0);
+  const recvT=misRows.reduce((a,r)=>a+r.recv,0);
+  mk('c-ov3',{type:'doughnut',data:{
+    labels:['Risk','ARM','Others','Receivables'],
+    datasets:[{data:[riskT,armT,othT,recvT].map(v=>+(v/100000).toFixed(1)),
+      backgroundColor:[C.navy,C.ind,C.wedge,C.aqua],borderWidth:0,hoverOffset:8}]
+  },options:{responsive:true,maintainAspectRatio:false,cutout:'58%',
+    plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10,padding:10,font:{size:10}}},
+    tooltip:{callbacks:{label:ctx=>`${ctx.label}: ₹${ctx.raw}L`}}}}});
+
+  // Chart 4 — Annual FY bar (always show all, highlight selected FY)
+  const fyLabels=ARP.map(a=>a.fy.replace('-20','-').replace('20','').replace(/-(\d{4})/,(m,y)=>'-'+y.slice(-2)));
+  mk('c-ov4',{type:'bar',data:{labels:ARP.map(a=>a.fy.slice(-4)+'-'+String(parseInt(a.fy.slice(-4))+1).slice(-2)),datasets:[{
+    data:ARP.map(a=>+(a.rev/100000).toFixed(1)),
+    backgroundColor:ARP.map(a=>a.fy===fy?C.gold:C.navy+'CC'),
+    borderRadius:6,barPercentage:.65,
+    dlFmt:v=>'₹'+v+'L',dlColor:C.navy
+  }]},options:barOpts(v=>'₹'+v+'L')});
+
+  // Chart 5 — Rev per ₹1
+  mk('c-ov5',{type:'bar',data:{labels:rows.map(r=>r.mo),datasets:[
+    {data:rows.map(r=>+(r.rev/r.expW).toFixed(1)),backgroundColor:C.navy+'CC',borderRadius:4,barPercentage:.7,dlFmt:v=>v+'x',dlColor:C.navy,label:'W/Sales'},
+    {data:rows.map(r=>+(r.rev/r.expWO).toFixed(1)),backgroundColor:C.aqua+'CC',borderRadius:4,barPercentage:.7,dlFmt:v=>v+'x',dlColor:C.wedge,label:'W/O Sales'},
+  ]},options:{...barOpts(v=>v+'x'),plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:8,padding:8,font:{size:10}}}}}});
+}
+function ovReset(){
+  document.getElementById('ov-fy').value='all';
+  document.getElementById('ov-mo').value='all';
+  ovApply();
+}
+
+// ═══════════════════════════════════════════════
+// REVENUE TAB
+// ═══════════════════════════════════════════════
+function rvFilter(){
+  const fy=document.getElementById('rv-fy').value;
+  const mo=document.getElementById('rv-mo').value;
+  let rows=MIS;
+  if(fy!=='all')rows=rows.filter(r=>r.fy===fy);
+  if(mo!=='all')rows=rows.filter(r=>r.mo===mo);
+  return rows;
+}
+function rvApply(){
+  const rows=rvFilter();
+  const fy=document.getElementById('rv-fy').value;
+  const mo=document.getElementById('rv-mo').value;
+
+  // KPIs
+  const totRev=rows.reduce((a,r)=>a+r.rev,0);
+  const totSalBk=rows.reduce((a,r)=>a+r.salBk,0);
+  const totInvCl=rows.reduce((a,r)=>a+r.invCl,0);
+  const totRisk=rows.reduce((a,r)=>a+r.risk,0);
+  document.getElementById('rv-k1').textContent=fmtR(totRev);
+  document.getElementById('rv-k2').textContent=fmtR(totSalBk);
+  document.getElementById('rv-k3').textContent=fmtR(totInvCl);
+  document.getElementById('rv-k4').textContent=fmtR(totRisk);
+
+  const sub=rows.length===1?rows[0].mo+' '+rows[0].fy:`${rows.length} months`;
+  ['rv-c1-sub','rv-c2-sub','rv-c3-sub','rv-c4-sub'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=sub;});
+
+  const lbl=rows.map(r=>r.mo);
+  // C1 — monthly components
+  mk('c-rv1',{type:'line',data:{labels:lbl,datasets:[
+    {data:rows.map(r=>+(r.rev/100000).toFixed(1)),borderColor:C.navy,backgroundColor:'rgba(9,30,86,.1)',borderWidth:2.5,pointRadius:3,fill:true,tension:.4,label:'Total Rev'},
+    {data:rows.map(r=>+(r.salBk/100000).toFixed(1)),borderColor:C.ind,borderWidth:2,borderDash:[5,3],pointRadius:2,tension:.4,label:'Sales Booking'},
+    {data:rows.map(r=>+(r.invCl/100000).toFixed(1)),borderColor:C.aqua,borderWidth:2,borderDash:[5,3],pointRadius:2,tension:.4,label:'Inv Cleared'},
+  ]},options:{...lineOpts(v=>'₹'+v+'L'),plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:8,padding:8,font:{size:10}}}}}});
+
+  // C2 — donut breakdown
+  const riskT=rows.reduce((a,r)=>a+r.risk,0);
+  const armT=rows.reduce((a,r)=>a+r.arm,0);
+  const othT=rows.reduce((a,r)=>a+r.others,0);
+  const recvT=rows.reduce((a,r)=>a+r.recv,0);
+  mk('c-rv2',{type:'doughnut',data:{
+    labels:['Risk','ARM','Others','Receivables'],
+    datasets:[{data:[riskT,armT,othT,recvT].map(v=>+(v/100000).toFixed(1)),
+      backgroundColor:[C.navy,C.ind,C.wedge,C.aqua],borderWidth:0,hoverOffset:8}]
+  },options:{responsive:true,maintainAspectRatio:false,cutout:'55%',
+    plugins:{legend:{display:true,position:'right',labels:{boxWidth:12,padding:14,font:{size:11}}},
+    tooltip:{callbacks:{label:ctx=>`${ctx.label}: ₹${ctx.raw}L`}}}}});
+
+  // C3 — Risk trend
+  mk('c-rv3',{type:'bar',data:{labels:lbl,datasets:[
+    {data:rows.map(r=>+(r.risk/100000).toFixed(1)),backgroundColor:C.navy+'CC',borderRadius:5,barPercentage:.6,dlFmt:v=>'₹'+v+'L',dlColor:C.navy}
+  ]},options:barOpts(v=>'₹'+v+'L')});
+
+  // C4 — Receivables vs ARM
+  mk('c-rv4',{type:'line',data:{labels:lbl,datasets:[
+    {data:rows.map(r=>+(r.recv/100000).toFixed(1)),borderColor:C.wedge,backgroundColor:'rgba(75,145,165,.1)',borderWidth:2.5,pointRadius:3,fill:true,tension:.4,label:'Receivables'},
+    {data:rows.map(r=>+(r.arm/100000).toFixed(1)),borderColor:C.gold,borderWidth:2,pointRadius:3,tension:.4,label:'ARM'},
+  ]},options:{...lineOpts(v=>'₹'+v+'L'),plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:8,padding:8,font:{size:10}}}}}});
+}
+function rvReset(){
+  document.getElementById('rv-fy').value='all';
+  document.getElementById('rv-mo').value='all';
+  document.getElementById('rv-stream').value='all';
+  rvApply();
+}
+
+// ═══════════════════════════════════════════════
+// MARKETING TAB
+// ═══════════════════════════════════════════════
+function mkFilter(){
+  const per=parseInt(document.getElementById('mk-period').value)||14;
+  let rows=MEXP;
+  if(per>0&&per<rows.length)rows=rows.slice(-per);
+  return rows;
+}
+function mkApply(){
+  const rows=mkFilter();
+  const view=document.getElementById('mk-view').value;
+  const isW=view==='w';
+
+  const lastRow=rows[rows.length-1];
+  document.getElementById('mk-k1').textContent=fmtK(lastRow?lastRow.adSpend:0);
+  document.getElementById('mk-k2').textContent=fmtK(lastRow?(isW?lastRow.totalSpend:lastRow.adSpend):0);
+  document.getElementById('mk-k3').textContent=fmtK(lastRow?(isW?lastRow.cacW:lastRow.cacWO):0);
+  // ROI from ROI table matching same period
+  const roiRows=ROI.slice(-rows.length);
+  const totRev=roiRows.reduce((a,r)=>a+r.rev,0);
+  const totExp=roiRows.reduce((a,r)=>a+(isW?r.expW:r.expWO),0);
+  const roi=Math.round(((totRev-totExp)/totExp)*100);
+  document.getElementById('mk-k4').textContent=roi+'%';
+  document.getElementById('mk-k3d').className='kd '+(isW?'dn':'up');
+  document.getElementById('mk-k3d').textContent=isW?'W/ Sales Team':'W/O Sales Team';
+
+  const sub=`Last ${rows.length} months`;
+  ['mk-c1-sub','mk-c2-sub','mk-c3-sub','mk-c4-sub'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=sub;});
+
+  // sync ROI data to match period
+  const roiR=ROI.slice(-rows.length);
+
+  // C1 rev vs exp
+  mk('c-mk1',{type:'line',data:{labels:rows.map(r=>r.mo),datasets:[
+    {data:roiR.map(r=>+(r.rev/100000).toFixed(1)),borderColor:C.navy,backgroundColor:'rgba(9,30,86,.1)',borderWidth:2.5,pointRadius:3,fill:true,tension:.4,label:'Revenue'},
+    {data:roiR.map(r=>+(r.expW/100000).toFixed(1)),borderColor:C.red,borderWidth:2,borderDash:[5,3],pointRadius:2,tension:.4,label:'Exp W/Sales'},
+    {data:roiR.map(r=>+(r.expWO/100000).toFixed(1)),borderColor:C.gold,borderWidth:2,borderDash:[5,3],pointRadius:2,tension:.4,label:'Mktg Only'},
+  ]},options:{...lineOpts(v=>'₹'+v+'L'),plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:8,padding:8,font:{size:10}}}}}});
+
+  // C2 CAC trend
+  mk('c-mk2',{type:'line',data:{labels:rows.map(r=>r.mo),datasets:[
+    {data:rows.map(r=>r.cacW),borderColor:C.ind,backgroundColor:'rgba(78,106,198,.1)',borderWidth:2.5,pointRadius:3,fill:true,tension:.4,label:'CAC W/Sales'},
+    {data:rows.map(r=>r.cacWO),borderColor:C.aqua,borderWidth:2,pointRadius:2,tension:.4,label:'CAC W/O Sales'},
+  ]},options:{...lineOpts(v=>'₹'+(v/1000).toFixed(0)+'K'),plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:8,padding:8,font:{size:10}}}}}});
+
+  // C3 Rev per ₹1
+  mk('c-mk3',{type:'bar',data:{labels:rows.map(r=>r.mo),datasets:[
+    {data:roiR.map((r,i)=>+(r.rev/r.expW).toFixed(1)),backgroundColor:C.navy+'CC',borderRadius:4,barPercentage:.7,dlFmt:v=>v+'x',dlColor:C.navy,label:'W/Sales'},
+    {data:roiR.map((r,i)=>+(r.rev/r.expWO).toFixed(1)),backgroundColor:C.aqua+'CC',borderRadius:4,barPercentage:.7,dlFmt:v=>v+'x',dlColor:C.wedge,label:'W/O Sales'},
+  ]},options:{...barOpts(v=>v+'x'),plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:8,padding:8,font:{size:10}}}}}});
+
+  // C4 new members
+  mk('c-mk4',{type:'bar',data:{labels:rows.map(r=>r.mo),datasets:[
+    {data:rows.map(r=>r.regs),backgroundColor:C.navy+'CC',borderRadius:4,barPercentage:.8,dlFmt:v=>String(v),dlColor:C.navy,label:'Regs'},
+    {data:rows.map(r=>r.paid),backgroundColor:C.gold+'BB',borderRadius:4,barPercentage:.8,dlFmt:v=>String(v),dlColor:'#886000',label:'Subs'},
+  ]},options:{...barOpts(),plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:8,padding:8,font:{size:10}}}}}});
+}
+function mkReset(){
+  document.getElementById('mk-view').value='w';
+  document.getElementById('mk-period').value='14';
+  mkApply();
+}
+
+// ═══════════════════════════════════════════════
+// MEMBERS TAB — fully filtered by FY
+// ═══════════════════════════════════════════════
+function mbApply(){
+  const fy=document.getElementById('mb-fy').value;
+  const b=document.getElementById('mb-badge');
+  if(fy!=='all'){b.style.display='inline';b.textContent=fy;}
+  else b.style.display='none';
+
+  // Find selected row
+  const row=fy==='all'?ARP[ARP.length-1]:ARP.find(a=>a.fy===fy)||ARP[ARP.length-1];
+
+  // KPIs — show data for selected FY
+  document.getElementById('mb-k1').textContent=fmtR(row.rev);
+  document.getElementById('mb-k2').textContent=row.members!=null?row.members.toLocaleString():'—';
+  document.getElementById('mb-k3').textContent=fmtK(row.revPerMem);
+  document.getElementById('mb-k4').textContent=fmtK(row.arpSub);
+
+  // C1 — Revenue per contributing member (all FY, highlight selected)
+  mk('c-mb1',{type:'bar',data:{
+    labels:ARP.map(a=>a.fy.replace('20','').replace(/-(\d{4})/,(m,y)=>'-'+y.slice(-2))),
+    datasets:[
+      {data:ARP.map(a=>+(a.rev/100000).toFixed(1)),
+        backgroundColor:ARP.map(a=>a.fy===fy||fy==='all'?C.navy:C.navy+'55'),
+        borderRadius:6,barPercentage:.65,yAxisID:'y',label:'Revenue(₹L)',
+        dlFmt:v=>fmtR(v*100000),dlColor:C.navy},
+      {data:ARP.map(a=>a.members),type:'line',
+        borderColor:C.gold,borderWidth:2.5,
+        pointRadius:ARP.map(a=>a.fy===fy&&fy!=='all'?7:4),
+        pointBackgroundColor:ARP.map(a=>a.fy===fy&&fy!=='all'?C.gold:C.gold+'BB'),
+        tension:.4,yAxisID:'y1',label:'Members',noDL:true},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:8,padding:8,font:{size:10}}}},
+      scales:{
+        x:{...NG,ticks:{font:{size:10}}},
+        y:{...NG,ticks:{callback:v=>fmtR(v*100000),font:{size:10}}},
+        y1:{...NG,position:'right',ticks:{font:{size:10}}}
+      }}});
+
+  // C2 — ARP Reg vs Sub (all FY, highlight selected)
+  mk('c-mb2',{type:'bar',data:{
+    labels:ARP.map(a=>a.fy.replace('20','').replace(/-(\d{4})/,(m,y)=>'-'+y.slice(-2))),
+    datasets:[
+      {data:ARP.map(a=>a.arpReg),
+        backgroundColor:ARP.map(a=>a.fy===fy||fy==='all'?C.navy:C.navy+'44'),
+        borderRadius:5,barPercentage:.8,label:'ARP/Reg',dlFmt:v=>fmtK(v),dlColor:C.navy},
+      {data:ARP.map(a=>a.arpSub),
+        backgroundColor:ARP.map(a=>a.fy===fy||fy==='all'?C.wedge:C.wedge+'44'),
+        borderRadius:5,barPercentage:.8,label:'ARP/Sub',dlFmt:v=>fmtK(v),dlColor:C.wedge},
+    ]},options:{...barOpts(v=>fmtK(v)),plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:8,padding:8,font:{size:10}}}}}});
+
+  // C3 — Cumulative members
+  mk('c-mb3',{type:'line',data:{
+    labels:ARP.map(a=>a.fy.replace('20','').replace(/-(\d{4})/,(m,y)=>'-'+y.slice(-2))),
+    datasets:[
+      {data:ARP.map(a=>a.cumRegs),borderColor:C.navy,backgroundColor:'rgba(9,30,86,.1)',borderWidth:2.5,
+        pointRadius:ARP.map(a=>a.fy===fy&&fy!=='all'?7:4),fill:true,tension:.4,label:'Cum Regs'},
+      {data:ARP.map(a=>a.cumSubs),borderColor:C.aqua,borderWidth:2,
+        pointRadius:ARP.map(a=>a.fy===fy&&fy!=='all'?7:3),tension:.4,label:'Cum Subs'},
+    ]},options:{...lineOpts(v=>v.toLocaleString()),plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:8,padding:8,font:{size:10}}}}}});
+
+  // C4 — New per FY
+  mk('c-mb4',{type:'bar',data:{
+    labels:ARP.map(a=>a.fy.replace('20','').replace(/-(\d{4})/,(m,y)=>'-'+y.slice(-2))),
+    datasets:[
+      {data:ARP.map(a=>a.regs),
+        backgroundColor:ARP.map(a=>a.fy===fy||fy==='all'?C.ind:C.ind+'44'),
+        borderRadius:5,barPercentage:.8,dlFmt:v=>v.toLocaleString(),dlColor:C.ind,label:'Regs'},
+      {data:ARP.map(a=>a.subs),
+        backgroundColor:ARP.map(a=>a.fy===fy||fy==='all'?C.gold:C.gold+'44'),
+        borderRadius:5,barPercentage:.8,dlFmt:v=>String(v),dlColor:'#886000',label:'Subs'},
+    ]},options:{...barOpts(),plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:8,padding:8,font:{size:10}}}}}});
+}
+function mbReset(){document.getElementById('mb-fy').value='all';mbApply();}
+
+// ═══════════════════════════════════════════════
+// TEAM TAB
+// ═══════════════════════════════════════════════
+function tmApply(){
+  const mem=document.getElementById('tm-mem').value;
+  const perVal=document.getElementById('tm-per').value;
+  const n=perVal==='all'?TEAM_ALL_MOS.length:parseInt(perVal);
+  const mos=TEAM_ALL_MOS.slice(-n);
+
+  document.getElementById('tm-hm-sub').textContent=`— ${mos.length} months`;
+
+  // Decide which members to show
+  const members=mem==='all'?Object.keys(TEAM):[mem];
+
+  // KPIs — based on latest month across shown members
+  const latestIdx=TEAM_ALL_MOS.length-1;
+  let topName='',topVal=-Infinity;
+  members.forEach(m=>{
+    const vals=TEAM[m];
+    if(!vals)return;
+    const v=vals[latestIdx];
+    if(v!=null&&v>topVal){topVal=v;topName=m;}
+  });
+  document.getElementById('tm-k1').textContent=topName||'—';
+  document.getElementById('tm-k1d').textContent=topVal>-Infinity?topVal+'% ('+TEAM_ALL_MOS[latestIdx]+')':'—';
+
+  // avg of latest month
+  const latestVals=members.map(m=>(TEAM[m]||[])[latestIdx]).filter(v=>v!=null);
+  const avg=latestVals.length?Math.round(latestVals.reduce((a,b)=>a+b,0)/latestVals.length):0;
+  document.getElementById('tm-k2').textContent=avg+'%';
+
+  const above80=latestVals.filter(v=>v>=80).length;
+  document.getElementById('tm-k3').textContent=above80;
+
+  // Heatmap
+  buildHeatmap(mos,members);
+
+  // Trend chart
+  const tColors=[C.navy,C.ind,C.wedge,C.aqua,C.gold,'#7C5DFA'];
+  mk('c-tm1',{type:'line',data:{
+    labels:mos,
+    datasets:members.map((m,i)=>({
+      label:m,
+      data:mos.map(mo=>{
+        const idx=TEAM_ALL_MOS.indexOf(mo);
+        return idx>=0?(TEAM[m]||[])[idx]:null;
+      }),
+      borderColor:tColors[i%tColors.length],
+      borderWidth:2,pointRadius:4,
+      pointBackgroundColor:tColors[i%tColors.length],
+      tension:.4,spanGaps:true
+    }))
+  },options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:8,padding:8,font:{size:10}}}},
+    scales:{x:{...NG,ticks:{font:{size:9},maxRotation:45}},
+            y:{...NG,min:0,max:140,ticks:{callback:v=>v+'%',font:{size:10}}}}}});
+
+  // Snapshot — latest month horizontal bar
+  const snapVals=members.map(m=>(TEAM[m]||[])[latestIdx]||0);
+  const snapColors=snapVals.map(v=>v>=100?'#166534':v>=81?C.aqua:v>=51?C.gold:v>=25?'#FD7E14':C.red);
+  mk('c-tm2',{type:'bar',data:{
+    labels:members,
+    datasets:[{data:snapVals,backgroundColor:snapColors,borderRadius:7,barPercentage:.6,
+      dlFmt:v=>v+'%',dlColor:'#fff'}]
+  },options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{x:{...NG,min:0,max:130,ticks:{callback:v=>v+'%',font:{size:10}}},
+            y:{...NG,ticks:{font:{size:11,weight:'600'}}}}}});
+}
+
+function buildHeatmap(mos,members){
+  const tbl=document.getElementById('hmt');
+  let h=`<tr><th class="hmh" style="text-align:left;padding-right:8px">Member</th>`;
+  mos.forEach(m=>h+=`<th class="hmh">${m}</th>`);
+  h+='</tr>';
+  members.forEach(nm=>{
+    const vals=TEAM[nm]||[];
+    h+=`<tr><td class="hmn">${nm}</td>`;
+    mos.forEach(mo=>{
+      const idx=TEAM_ALL_MOS.indexOf(mo);
+      const v=idx>=0?vals[idx]:null;
+      const c=hmColor(v);
+      h+=`<td class="hmc" title="${nm}: ${c.t}" style="background:${c.bg};color:${c.fc}">${c.t}</td>`;
+    });
+    h+='</tr>';
+  });
+  tbl.innerHTML=h;
+}
+function hmColor(v){
+  if(v===null||v===undefined)return{bg:'#F1F5F9',fc:'#CBD5E1',t:'—'};
+  if(v>=100)return{bg:'#166534',fc:'#fff',t:v+'%'};
+  if(v>=81) return{bg:C.aqua,fc:'#074F5A',t:v+'%'};
+  if(v>=51) return{bg:C.gold,fc:'#5a4800',t:v+'%'};
+  if(v>=25) return{bg:'#FD7E14',fc:'#fff',t:v+'%'};
+  return{bg:C.red,fc:'#fff',t:v+'%'};
+}
+function tmReset(){
+  document.getElementById('tm-mem').value='all';
+  document.getElementById('tm-per').value='9';
+  tmApply();
+}
+
+// ═══════════════════════════════════════════════
+// CHART OPTION HELPERS
+// ═══════════════════════════════════════════════
+function lineOpts(yFmt){
+  return{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{x:{...NG,ticks:{font:{size:10},maxRotation:45}},
+            y:{...NG,ticks:{callback:yFmt||(v=>v),font:{size:10}}}}};
+}
+function barOpts(yFmt){
+  return{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{x:{...NG,ticks:{font:{size:10},maxRotation:45}},
+            y:{...NG,ticks:{callback:yFmt||(v=>v),font:{size:10}}}}};
+}
+
+// ═══════════════════════════════════════════════
+// TAB NAVIGATION
+// ═══════════════════════════════════════════════
+function goTab(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  btn.classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ═══════════════════════════════════════════════
+// FILE UPLOAD & PARSE
+// ═══════════════════════════════════════════════
+document.getElementById('fi').addEventListener('change',async(e)=>{
+  const files=Array.from(e.target.files);
+  if(!files.length)return;
+  const st=document.getElementById('ustatus');
+  st.textContent='⏳ Processing...';
+  let loaded=0;
+  for(const f of files){
+    try{
+      const buf=await f.arrayBuffer();
+      const wb=XLSX.read(buf);
+      const nm=f.name.toLowerCase();
+      if(nm.includes('roi')&&!nm.includes('revenue_growth'))parseROIFile(wb);
+      if(nm.includes('revenue_growth')||nm.includes('mis'))parseMISFile(wb);
+      if(nm.includes('marketing_exp'))parseMEXPFile(wb);
+      if(nm.includes('avg_revenue')||nm.includes('arp'))parseARPFile(wb);
+      if(nm.includes('month_wise')||nm.includes('team'))parseTeamFile(wb);
+      loaded++;
+    }catch(err){console.error('Parse error:',f.name,err);}
+  }
+  // Repopulate & redraw everything
+  populateMonths();
+  ovApply();rvApply();mkApply();mbApply();tmApply();
+  st.textContent=`✅ ${loaded} file(s) loaded — all charts updated`;
+  document.getElementById('period-badge').textContent='Live Data';
+  e.target.value='';
+});
+
+function parseROIFile(wb){
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1}).slice(1).filter(r=>r[0]&&!isNaN(r[0]));
+  if(!rows.length)return;
+  ROI=rows.map(r=>{
+    const s=+r[0],ew=+r[1]||0,ewo=+r[2]||0,rv=+r[3]||0;
+    const d=new Date(Math.round((s-25569)*86400*1000));
+    const mo=d.toLocaleDateString('en-IN',{month:'short',year:'2-digit'});
+    const yr=d.getFullYear(),m=d.getMonth()+1;
+    const fy=m>=4?`${yr}-${yr+1}`:`${yr-1}-${yr}`;
+    return{s,mo,fy,expW:ew,expWO:ewo,rev:rv};
+  }).slice(-14);
+}
+function parseMISFile(wb){
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1}).filter(r=>r[0]&&!isNaN(r[0]));
+  if(!rows.length)return;
+  MIS=rows.map(r=>{
+    const s=+r[0];
+    const d=new Date(Math.round((s-25569)*86400*1000));
+    const mo=d.toLocaleDateString('en-IN',{month:'short',year:'2-digit'});
+    const yr=d.getFullYear(),m=d.getMonth()+1;
+    const fy=m>=4?`${yr}-${yr+1}`:`${yr-1}-${yr}`;
+    return{s,mo,fy,rev:+r[1]||0,salBk:+r[2]||0,invCl:+r[3]||0,
+           others:+r[4]||0,risk:+r[5]||0,recv:+r[6]||0,arm:+r[10]||0};
+  }).slice(-14);
+}
+function parseMEXPFile(wb){
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1}).slice(1).filter(r=>r[1]&&!isNaN(r[1]));
+  if(!rows.length)return;
+  MEXP=rows.map(r=>{
+    const s=+r[1];
+    const d=new Date(Math.round((s-25569)*86400*1000));
+    const mo=d.toLocaleDateString('en-IN',{month:'short',year:'2-digit'});
+    const yr=d.getFullYear(),m=d.getMonth()+1;
+    const fy=m>=4?`${yr}-${yr+1}`:`${yr-1}-${yr}`;
+    return{s,mo,fy,paid:+r[2]||0,regs:+r[3]||0,adSpend:+r[4]||0,
+           cacWO:+r[5]||0,salesCost:+r[7]||0,totalSpend:+r[8]||0,
+           cacW:+r[9]||0};
+  }).slice(-14);
+}
+function parseARPFile(wb){
+  const ws=wb.Sheets[wb.SheetNames.includes('Contributing Member Update')?'Contributing Member Update':wb.SheetNames[0]];
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1}).slice(1).filter(r=>r[0]);
+  const ws2=wb.Sheets['ARP']||wb.Sheets[wb.SheetNames[1]];
+  const arRows=ws2?XLSX.utils.sheet_to_json(ws2,{header:1}).slice(1).filter(r=>r[0]):[];
+  if(!rows.length)return;
+  ARP=rows.map((r,i)=>{
+    const arRow=arRows[i]||[];
+    return{
+      fy:String(r[0]),rev:+r[1]||0,members:r[2]||null,revPerMem:+r[3]||null,
+      cumMem:+r[4]||0,cumRev:+r[5]||0,
+      arpReg:+arRow[7]||0,arpSub:+arRow[8]||0,
+      regs:+arRow[3]||0,subs:+arRow[5]||0,
+      cumRegs:+arRow[4]||0,cumSubs:+arRow[6]||0,
+    };
+  });
+}
+function parseTeamFile(wb){
+  const ws=wb.Sheets['Achieved %']||wb.Sheets[wb.SheetNames[0]];
+  if(!ws)return;
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1});
+  const hdr=rows[0];if(!hdr)return;
+  // Convert serial col headers to month strings
+  const newMos=hdr.slice(1).filter(h=>h&&!isNaN(h)).map(s=>{
+    const d=new Date(Math.round((s-25569)*86400*1000));
+    return d.toLocaleDateString('en-IN',{month:'short',year:'2-digit'});
+  });
+  rows.slice(1).forEach(r=>{
+    const nm=String(r[0]||''). trim();
+    if(!nm||nm==='Team'||nm==='Imp Note')return;
+    const vals=hdr.slice(1).filter(h=>h&&!isNaN(h)).map((_,i)=>{
+      const v=r[i+1];
+      return v!=null&&v!==''?Math.round(+v*100):null;
+    });
+    TEAM[nm]=vals;
+  });
+  // update months reference
+  if(newMos.length>0){
+    TEAM_ALL_MOS.length=0;
+    newMos.forEach(m=>TEAM_ALL_MOS.push(m));
+  }
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+populateMonths();
+// Default: latest FY for all tabs
+document.getElementById('ov-fy').value='2026-2027';
+document.getElementById('rv-fy').value='2026-2027';
+document.getElementById('mb-fy').value='2026-2027';
+ovApply();rvApply();mkApply();mbApply();tmApply();
+</script>
+</body>
+</html>
